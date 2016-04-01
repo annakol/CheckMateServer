@@ -1,4 +1,4 @@
-package module;
+package main.java.module;
 
 public class Location {
 	public String lat;

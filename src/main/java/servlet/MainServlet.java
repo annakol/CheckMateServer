@@ -1,4 +1,4 @@
-package servlet;
+package main.java.servlet;
 
 import java.io.IOException;
 
@@ -8,8 +8,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import module.Location;
-import algo.PlacesService;
+import main.java.algo.PlacesService;
+import main.java.module.Location;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

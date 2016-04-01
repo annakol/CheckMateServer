@@ -1,4 +1,4 @@
-package module;
+package main.java.module;
 
 import java.util.List;
 
