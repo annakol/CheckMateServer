@@ -1,9 +1,9 @@
-package module;
+package model;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class FacebookLocationTypes {
+public class TypeDictionary {
 	private static Map<String, String> typeN;
 	
 	public static Map<String, String> getInstance(){
@@ -16,7 +16,7 @@ public class FacebookLocationTypes {
 	private static void initMap(){
 		typeN = new HashMap<String, String>();
 		typeN.put("Amusement Park Ride", "amusement_park");
-		typeN.put("Zoo & Aquarium", "aquarium");
+		typeN.put("Zoo & Aquarium", "zoo");
 		typeN.put("Art Gallery", "art_gallery");
 		typeN.put("Bakery", "bakery");
 		typeN.put("Bar", "bar");
