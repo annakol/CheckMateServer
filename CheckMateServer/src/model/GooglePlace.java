@@ -1,9 +1,9 @@
-package module;
+package model;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Place {
+public class GooglePlace {
 	
 	public enum Type {
 		amusement_park  ,
@@ -35,12 +35,13 @@ public class Place {
 	public String name;
 	public List<Type> types; 
 	public Location location;
+	public String address;
 
-	public Place() {
-		types = new ArrayList<Place.Type>();
+	public GooglePlace() {
+		types = new ArrayList<GooglePlace.Type>();
 	}
 	
-	public Place(String id,String name, List<Type> types, Location location) {
+	public GooglePlace(String id,String name, List<Type> types, Location location) {
 		this.id = id;
 		this.name = name;
 		this.types = types;
