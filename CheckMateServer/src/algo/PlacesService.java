@@ -18,6 +18,7 @@ import model.Place;
 
 public class PlacesService {
 
+	private static final String HEBREW_LANG = "iw";
 	private static final String API_SERVER_KEY = "AIzaSyB9y8JYZK-7D2Cag6oFEK5km8DOg5SAn6w";
 	private static final String PLACES_API_BASE = "https://maps.googleapis.com/maps/api/place";
 	private static final String TYPE_SEARCH = "/nearbysearch";
@@ -39,9 +40,11 @@ public class PlacesService {
 				}
 				for (int i = 0; i < array.size(); i++) {
 					try {
-						Place place = Place.jsonToPontoReferencia((JsonObject) array.get(i));
+						Place place = new Place((JsonObject) array.get(i));
 						arrayList.add(place);
 					} catch (Exception e) {
+						System.out.println(e.getMessage());
+						e.printStackTrace();
 					}
 				}
 				if (nextPage != null) {
@@ -92,6 +95,7 @@ public class PlacesService {
 		sb.append(TYPE_SEARCH);
 		sb.append(OUT_JSON);
 		sb.append("?key=" + API_SERVER_KEY);
+		sb.append("&language=" + HEBREW_LANG);
 		sb.append("&location=" + currLoc.lat + "," + currLoc.lng);
 		sb.append("&radius=" + String.valueOf(radius));
 		sb.append("&type=" + type);

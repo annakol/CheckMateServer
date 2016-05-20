@@ -9,21 +9,36 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.restfb.Connection;
+import com.restfb.FacebookClient;
+import com.restfb.Parameter;
 
-import model.GooglePlace.Type;
+import algo.RatingManager;
+import facebook.FacebookPlace;
+import facebook.LoggedInFacebookClient;
 
 public class Place {
 	private String id;
 	private String icon;
 	private String name;
 	private String vicinity;
-	private Double latitude;
-	private Double longitude;
-	private String address;
-	private String phoneNumber;
-	private float rating;
+	private Location location = new Location();
+	private float googleRating;
 	private String url;
 	private List<String> types = new ArrayList<String>();
+	private double distance;
+	// private Double latitude;
+	// private Double longitude;
+
+	// doesn't exist
+	private String address;
+	private String phoneNumber;
+
+	// local
+	private Double rate;
+
+	// facebook
+	private int checkins;
 
 	public List<String> getTypes() {
 		return types;
@@ -46,19 +61,19 @@ public class Place {
 	}
 
 	public Double getLatitude() {
-		return latitude;
+		return Double.parseDouble(location.lat);
 	}
 
 	public void setLatitude(Double latitude) {
-		this.latitude = latitude;
+		this.location.lat = latitude.toString();
 	}
 
 	public Double getLongitude() {
-		return longitude;
+		return Double.parseDouble(location.lng);
 	}
 
 	public void setLongitude(Double longitude) {
-		this.longitude = longitude;
+		this.location.lng = longitude.toString();
 	}
 
 	public String getName() {
@@ -93,14 +108,6 @@ public class Place {
 		this.phoneNumber = phoneNumber;
 	}
 
-	public float getRating() {
-		return rating;
-	}
-
-	public void setRating(float rating) {
-		this.rating = rating;
-	}
-
 	public String getUrl() {
 		return url;
 	}
@@ -113,45 +120,121 @@ public class Place {
 		this.types = types;
 	}
 
-	public static Place jsonToPontoReferencia(JsonObject pontoReferencia) {
+	public Location getLocation() {
+		return location;
+	}
+
+	public void setLocation(Location location) {
+		this.location = location;
+	}
+
+	public Double getRate() {
+		return rate;
+	}
+
+	public void setRate(Double rate) {
+		this.rate = rate;
+	}
+
+	public int getCheckins() {
+		return checkins;
+	}
+
+	public void setCheckins(int checkins) {
+		this.checkins = checkins;
+	}
+
+	public float getGoogleRating() {
+		return googleRating;
+	}
+
+	public void setGoogleRating(float googlRating) {
+		this.googleRating = googlRating;
+	}
+
+	public double getDistance() {
+		return distance;
+	}
+
+	public void setDistance(double distance) {
+		this.distance = distance;
+	}
+
+	public Place() {
+
+	}
+
+	public Place(JsonObject placeJson) {
 		try {
-			Place result = new Place();
-			JsonObject geometry = (JsonObject) pontoReferencia.get("geometry");
+			JsonObject geometry = (JsonObject) placeJson.get("geometry");
 			JsonObject location = (JsonObject) geometry.get("location");
-			result.setLatitude(location.get("lat").getAsDouble());
-			result.setLongitude(location.get("lng").getAsDouble());
-			result.setIcon(pontoReferencia.get("icon").getAsString());
-			result.setName(pontoReferencia.get("name").getAsString());
-			JsonElement vicinityJson = pontoReferencia.get("vicinity");
+			this.setLatitude(location.get("lat").getAsDouble());
+			this.setLongitude(location.get("lng").getAsDouble());
+			this.setIcon(placeJson.get("icon").getAsString());
+			this.setName(placeJson.get("name").getAsString());
+			JsonElement vicinityJson = placeJson.get("vicinity");
 			if (vicinityJson != null) {
-				result.setVicinity(vicinityJson.getAsString());
+				this.setVicinity(vicinityJson.getAsString());
 			}
-			result.setId(pontoReferencia.get("id").getAsString());
+			this.setId(placeJson.get("id").getAsString());
 			// result.setAddress(pontoReferencia.get("formatted_address").getAsString());
 			// result.setPhoneNumber(pontoReferencia.get("formatted_phone_number").getAsString());
-			JsonElement rating = pontoReferencia.get("rating");
+			JsonElement rating = placeJson.get("rating");
 			if (rating != null) {
-				result.setRating(rating.getAsFloat());
+				this.setGoogleRating(rating.getAsFloat());
 			}
 			// result.setUrl(pontoReferencia.get("url").getAsString());
 
-			JsonArray typesArray = pontoReferencia.getAsJsonArray("types");
+			JsonArray typesArray = placeJson.getAsJsonArray("types");
 
 			for (int j = 0; j < typesArray.size(); j++) {
-				result.getTypes().add(typesArray.get(j).getAsString());
+				this.getTypes().add(typesArray.get(j).getAsString());
 			}
-			return result;
+
+			this.fillFacebookData();
+
+			this.rate = RatingManager.getInstance().getRate(this);
+
 		} catch (JsonParseException ex) {
 			Logger.getLogger(Place.class.getName()).log(Level.SEVERE, null, ex);
 		}
-		return null;
+	}
+
+	public void fillFacebookData() {
+		FacebookClient facebookClient = new LoggedInFacebookClient();
+		Connection<FacebookPlace> placeSearch = facebookClient.fetchConnection("search", FacebookPlace.class,
+				Parameter.with("q", this.getName()), Parameter.with("type", "place"),
+				Parameter.with("fields", "id,likes,name,checkins,location,category,category_list"));
+		// TODO: remove chars like ', ", /, \ and such....
+		int size = placeSearch.getData().size();
+		int checkins = 0;
+		if (size <= 0) {
+			System.out.println("there is no place named " + this.getName() + " in facebook");
+
+		} else if (size <= 2) {
+			for (FacebookPlace place : placeSearch.getData()) {
+				// System.out.println(place.getCheckins());
+				if (place.getCheckins() != null) {
+					checkins += place.getCheckins().intValue();
+				}
+			}
+		} else {
+			for (int i = 0; i < 3; i++) {
+				// TODO: check locations?
+				// System.out.println(placeSearch.getData().get(i).getCheckins());
+				if (placeSearch.getData().get(i).getCheckins() != null) {
+					checkins += placeSearch.getData().get(i).getCheckins().intValue();
+				}
+			}
+		}
+
+		this.setCheckins(checkins);
+
 	}
 
 	@Override
 	public String toString() {
-		return "Place{" + "id=" + id + ", icon=" + icon + ", name=" + name + ", latitude=" + latitude + ", longitude="
-				+ longitude + ", address=" + address + ", phone=" + phoneNumber + ", rating=" + rating + ", url=" + url
-				+ "}";
+		return "Place{" + this.name + ":" + this.rate + " - distance=" + this.distance + " ,id="+this.id+"}";
 	}
 
 }

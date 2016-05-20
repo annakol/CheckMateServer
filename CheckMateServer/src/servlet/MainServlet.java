@@ -1,8 +1,10 @@
 package servlet;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,10 +23,10 @@ import com.google.gson.JsonParser;
 
 import algo.ConvertUtils;
 import algo.PlacesService;
-import model.GooglePlace;
-import model.JsonLocation;
+import algo.RatingManager;
 import model.Location;
 import model.Place;
+import model.Type;
 
 /**
  * Servlet implementation class MainServlet
@@ -36,7 +38,6 @@ public class MainServlet extends HttpServlet {
 	private static final String LOCATION_PARAM = "location";
 	private static final String CHECKIN_TYPES_PARAM = "types";
 	private static final String LOCATION_ERROR = "No location was sent!";
-	List<JsonLocation> finalLocations = new ArrayList<JsonLocation>();
 
 	/**
 	 * Default constructor.
@@ -44,15 +45,26 @@ public class MainServlet extends HttpServlet {
 	public MainServlet() {
 		// TODO Auto-generated constructor stub
 	}
-	
-	private List<Place> getAllPlacesFromGoogle(Location location, int radius ,Set<String> types){
-		
-		List<Place> places = new ArrayList<Place>(); 
-		PlacesService service =  new PlacesService();
-		for (String type : types) {
-			places.addAll(service.getPlaces(location, radius, type));
+
+	private Map<Type, List<Place>> getAllPlaces(Location location, int radius, Set<Type> types) {
+
+		Map<Type, List<Place>> places = new HashMap<Type, List<Place>>();
+		List<Place> curr;
+		PlacesService service = new PlacesService();
+		for (Type type : types) {
+			curr = service.getPlaces(location, radius, type.getName());
+			System.out.println("getAllPlaces  - " + type.getName());
+			if ((curr != null) && (!curr.isEmpty())) {
+				Collections.sort(curr, new Comparator<Place>() {
+					@Override
+					public int compare(Place place1, Place place2) {
+						return (place2.getRate().compareTo(place1.getRate()));
+					}
+				});
+				places.put(type, curr);
+			}
 		}
-	
+
 		return places;
 	}
 
@@ -62,7 +74,7 @@ public class MainServlet extends HttpServlet {
 	 */
 	protected void service(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		
+
 		String locStr = request.getParameter(LOCATION_PARAM);
 		Location currLoc = null;
 
@@ -77,27 +89,40 @@ public class MainServlet extends HttpServlet {
 		// checkinTypes =
 		// "{\"longitude\":32.051324,\"latitude\":34.811146,\"types\":[{\"type\":\"Shopping
 		// Mall\",\"count\":5},{\"type\":\"Cafe\",\"count\":7},{\"type\":\"Library\",\"count\":2},{\"type\":\"Gym\",\"count\":4},{\"type\":\"Restaurant\",\"count\":14}]}";
-		checkinTypes = "{'time':" + Calendar.getInstance().getTimeInMillis() + ", 'longitude':32.051324,"
-				+ "'latitude':34.811146," + "'types':[" + "{'type':'Shopping Mall','count':5},"
-				+ "{'type':'Cafe','count':7}," + "{'type':'Library','count':2}," + "{'type':'Gym','count':4},"
-				+ "{'type':'Restaurant','count':14}," + "{'type':'Park','count':7}]}";
-
+		checkinTypes = "{'userId': 1, " + "'time':" + Calendar.getInstance().getTimeInMillis()
+				+ ", 'longitude':34.819934," + "'latitude':32.088674," + "'types':[" + "{'type':'Cafe','count':7}]}";
+		//32.051324, 34.811146
+		//32.088674, 34.819934
 		JsonObject requestJson = new JsonParser().parse(checkinTypes).getAsJsonObject();
 		JsonArray typesArray = requestJson.getAsJsonArray("types");
 
-		Map<String, Integer> googleCheckinTypes = ConvertUtils.createGoogleTypeList(typesArray);
-		List<Place> places = getAllPlacesFromGoogle(new Location("32.051324", "34.811146"), 5000 ,googleCheckinTypes.keySet());
+		Integer userId = requestJson.get("userId").getAsInt();
+
+		Location currentLocation = new Location(requestJson.get("latitude").getAsString(),
+				requestJson.get("longitude").getAsString());
+
+		RatingManager.getInstance().init(currentLocation, userId);
+
+		// creates a <type, percent> map.
+		Map<Type, Double> googleCheckinTypes = ConvertUtils.createGoogleTypeList(typesArray);
+
+		Map<Type, List<Place>> places = getAllPlaces(currentLocation, 3000, googleCheckinTypes.keySet());
+
+		//List<Place> top30places;
 		
-		
-		
-		
-		for (Place place : places) {
-			System.out.println(place);
-			
-			
+		for (Map.Entry<Type, List<Place>> entry : places.entrySet())
+		{
+		    System.out.println(entry.getKey());	 
+		    for (Place p : entry.getValue()) {
+				System.out.println(p);
+			}
 		}
 		
-		
-		
+		Gson gson = new GsonBuilder().create();
+
+		response.setContentType("application/json");
+		response.setCharacterEncoding("utf-8");
+		gson.toJson(places.toString(), response.getWriter());
+
 	}
 }
