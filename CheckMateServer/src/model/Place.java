@@ -14,8 +14,8 @@ import com.restfb.FacebookClient;
 import com.restfb.Parameter;
 
 import algo.RatingManager;
-import facebook.FacebookPlace;
-import facebook.LoggedInFacebookClient;
+import services.FacebookPlace;
+import services.LoggedInFacebookClient;
 
 public class Place {
 	private String id;
@@ -200,6 +200,12 @@ public class Place {
 		}
 	}
 
+	//TODO: check if the place is open at the selected time
+	public boolean getAllGoogleData(){
+		//TODO: get all data from google
+		return true;
+	}
+	
 	public void fillFacebookData() {
 		FacebookClient facebookClient = new LoggedInFacebookClient();
 		Connection<FacebookPlace> placeSearch = facebookClient.fetchConnection("search", FacebookPlace.class,

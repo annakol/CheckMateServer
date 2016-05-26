@@ -1,4 +1,4 @@
-package facebook;
+package services;
 
 import com.restfb.DefaultFacebookClient;
 

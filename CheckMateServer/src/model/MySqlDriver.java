@@ -30,12 +30,13 @@ public class MySqlDriver {
 	}
 
 	public void connect() {
-		String url = "jdbc:mysql://sql7.freemysqlhosting.net:3306/";
-		String dbName = "sql7118748";
+		String url = "jdbc:mysql://127.0.0.1:3306/";
+		
+		String dbName = "checkmate";
 
 		String driver = "com.mysql.jdbc.Driver";
-		String userName = "sql7118748";
-		String password = "lA36PwKdfS";
+		String userName = "admin7RStHHh";
+		String password = "AKjhkEUcpZBj";
 
 		try {
 			try {
@@ -53,6 +54,42 @@ public class MySqlDriver {
 			System.out.println("VendorError: " + ex.getErrorCode());
 		}
 	}
+	
+	public Type getFacebookType(String facebookType){
+		connect();
+
+		ResultSet rs = null;
+		PreparedStatement preparedStatement = null;
+		Type t = null;
+		try {
+			String s = " SELECT f.fb_type_id, f.fb_type_name "
+					+ " FROM facebook_types f "
+					+ " WHERE f.fb_type_name = ? ";                                               
+			preparedStatement = conn.prepareStatement(s);
+			preparedStatement.setString(1, facebookType);
+			rs = preparedStatement.executeQuery();
+			if (rs.next()) {
+				t = new Type();
+				t.setId(rs.getInt("fb_type_id"));
+				t.setName(rs.getString("fb_type_name"));
+			}
+
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				preparedStatement.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return t;
+
+	}
 
 	public Type getGoogleType(String facebookType) {
 		connect();
@@ -63,7 +100,7 @@ public class MySqlDriver {
 		try {
 			String s = " SELECT g.goog_type_id, g.goog_type_name							   "
 					+ " FROM google_types g                                                    "
-					+ " JOIN facebook_to_google_types fg ON g.goog_type_id = fg.goog_type_id   "
+					+ " JOIN google_to_facebook fg ON g.goog_type_id = fg.goog_type_id   "
 					+ " JOIN facebook_types f ON f.fb_type_id = fg.fb_type_id                  "
 					+ " WHERE f.fb_type_name = ?                                               ";
 			preparedStatement = conn.prepareStatement(s);
@@ -100,7 +137,7 @@ public class MySqlDriver {
 		PreparedStatement preparedStatement = null;
 		int count = 0;
 		try {
-			String s = "SELECT COUNT(*) FROM emotions WHERE user_id = ? and goog_type_id = ? and  'like' = 1 and date > (CURRENT_TIMESTAMP - 30)";
+			String s = "SELECT COUNT(*) FROM emotions WHERE user_id = ? and goog_type_id = ? and  'like_ind' = 1 and date > (CURRENT_TIMESTAMP - 30)";
 			preparedStatement = conn.prepareStatement(s);
 			preparedStatement.setInt(1, googTypeId);
 			preparedStatement.setInt(2, userId);
@@ -133,7 +170,7 @@ public class MySqlDriver {
 		PreparedStatement preparedStatement = null;
 		int count = 0;
 		try {
-			String s = "SELECT COUNT(*) FROM emotions WHERE user_id = ? and goog_place_id = ? and 'like' = 0 and date BETWEEN NOW() - INTERVAL 30 DAY AND NOW()";
+			String s = "SELECT COUNT(*) FROM emotions WHERE user_id = ? and goog_place_id = ? and 'like_ind' = 0 and date BETWEEN NOW() - INTERVAL 30 DAY AND NOW()";
 			preparedStatement = conn.prepareStatement(s);
 			preparedStatement.setInt(1, userId);
 			preparedStatement.setString(2, placeId);

@@ -1,4 +1,4 @@
-package facebook;
+package services;
 
 import com.restfb.Facebook;
 import com.restfb.types.Place;

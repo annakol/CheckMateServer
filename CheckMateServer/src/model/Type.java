@@ -4,6 +4,8 @@ public class Type {
 	Integer id;
 	String name;
 	
+	public static Type other = new Type(-1,"other");
+	
 	public Type(Integer id, String name){
 		this.id = id;
 		this.name = name;

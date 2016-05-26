@@ -1,4 +1,4 @@
-package algo;
+package services;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -17,6 +17,14 @@ import model.Location;
 import model.Place;
 
 public class PlacesService {
+	
+	private int radius;
+	private Location location;
+
+	public PlacesService(Location location, int radius) {
+		this.radius = radius;
+		this.location = location;
+	}
 
 	private static final String HEBREW_LANG = "iw";
 	private static final String API_SERVER_KEY = "AIzaSyB9y8JYZK-7D2Cag6oFEK5km8DOg5SAn6w";
@@ -24,10 +32,10 @@ public class PlacesService {
 	private static final String TYPE_SEARCH = "/nearbysearch";
 	private static final String OUT_JSON = "/json";
 
-	public ArrayList<Place> getPlaces(Location currLoc, int radius, String type) {
+	public ArrayList<Place> getPlaces(String type) {
 
 		try {
-			String json = getPlacesJson(currLoc, radius, type, null);
+			String json = getPlacesJson(this.location, this.radius, type, null);
 
 			ArrayList<Place> arrayList = new ArrayList<Place>();
 
@@ -48,7 +56,7 @@ public class PlacesService {
 					}
 				}
 				if (nextPage != null) {
-					json = getPlacesJson(currLoc, radius, type, nextPage);
+					json = getPlacesJson(this.location, this.radius, type, nextPage);
 				} else {
 					json = null;
 				}
