@@ -20,7 +20,7 @@ import services.PlacesService;
 public class RecommendationManager {
 	
 	private static final int RADIUS = 3000;
-	private static final double OTHER_PERCENTS = 0.05;
+	private static final double OTHER_PERCENTS = 0.10;
 	private static final int TOTAL_RECOMMENDATION_AMOUNT = 30;
 
 	public static List<Place> getRecommendedPlaces(Location location, JsonArray facebookTypes, int userId) {
