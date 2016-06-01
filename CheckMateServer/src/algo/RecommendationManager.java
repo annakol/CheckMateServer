@@ -27,25 +27,16 @@ public class RecommendationManager {
 	private static final int TOTAL_RECOMMENDATION_AMOUNT = 30;
 
 	private static final MySqlDriver db = MySqlDriver.getInstance();
-
-	
-	private static void computeInterests(Map<Interest,Integer> allInterest, List<Interest> interests) {
-		for (Interest interest : interests) {
-			Integer prevValue = allInterest.get(interest);
-			allInterest.put(interest,  prevValue == null ? 1 : prevValue + 1);
-		}
-	}
 	
 	public static List<Place> getRecommendedPlaces(Location location, JsonArray facebookTypes, int userId) {
-
-		//convertListJson(facebookTypes);
 
 		Map<Type, Integer> checkinTypes = new HashMap<Type, Integer>();
 		List<Place> currTypePlaces;
 		Map<Type, List<Place>> allPlaces = new HashMap<Type, List<Place>>();
 		List<String> noGoogleTypeFbList = new ArrayList<String>();
 		Map<Interest,Integer> allInterest = new HashMap<Interest,Integer>();
-		List<Interest> interests = new ArrayList<Interest>();
+		List<String> allFbTypeNames = new ArrayList<String>();
+		List<Integer> allGoogleTypeName = new ArrayList<Integer>();
 		
 		// set the places service with the current location and the radius
 		PlacesService service = new PlacesService(location, RADIUS);
@@ -61,8 +52,8 @@ public class RecommendationManager {
 			// get the google type by the facebook type name
 			Type googleType = db.getGoogleType(typeName);
 
-			interests = db.getInterestsByFacebookType(typeName);
-			computeInterests(allInterest,interests);
+			allFbTypeNames.add(typeName);
+			allGoogleTypeName.add(googleType.getId());
 			
 			// if there is a google type linked to the current facebook type 
 			if (googleType != null) {
@@ -92,20 +83,21 @@ public class RecommendationManager {
 			}
 		}
 		
-		sortByComparator(allInterest);
 		
-		List<Type> otherTypes = new ArrayList<Type>();
+		List<Type> otherTypes = 
+				db.getGoogleTypesByInterestWithRate(allFbTypeNames, allGoogleTypeName, userId);
+		List<Type> chosenOther = new ArrayList<Type>();
+		Type randomType ;
+		for (int i=0; i < 3 && !otherTypes.isEmpty();i++) {
+			randomType = getRandomType(otherTypes);
+			chosenOther.add(randomType);
+			otherTypes.remove(randomType);
+		}
+		
 		List<Place> otherPlaces = new ArrayList<Place>();
-		for (Interest interest : allInterest.keySet()) {
-			List<Type> googTypes = db.getGoogleTypesByInterest(interest.getId());
-			for (Type googType : googTypes) {
-				if (!checkinTypes.containsKey(googType)) {
-					otherTypes.add(googType);
-					
-					// get places list from google by the type.
-					otherPlaces.addAll(service.getPlaces(googType.getName()));
-				}
-			}
+		
+		for (Type googType : chosenOther) {
+			otherPlaces.addAll(service.getPlaces(googType.getName()));
 		}
 		
 		if ((otherPlaces != null) && (!otherPlaces.isEmpty())) {
@@ -136,6 +128,31 @@ public class RecommendationManager {
 		});
 		
 		return finalPlaces;
+	}
+	
+	private static Type getRandomType(List<Type> googleTypes) {
+
+		// Compute the total weight of all items together
+		double totalWeight = 0.0d;
+		for (Type i : googleTypes)
+		{
+		    totalWeight += i.getRate();
+		}
+		
+		// Now choose a random item
+		int randomIndex = -1;
+		double random = Math.random() * totalWeight;
+		for (int i = 0; i < googleTypes.size(); ++i)
+		{
+		    random -= googleTypes.get(i).getRate();
+		    if (random <= 0.0d)
+		    {
+		        randomIndex = i;
+		        break;
+		    }
+		}
+		
+		return (randomIndex == -1 ? googleTypes.get(randomIndex) : null);
 	}
 	
 	private static Map<Interest, Integer> sortByComparator(Map<Interest, Integer> unsortMap) {

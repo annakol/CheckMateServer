@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import facebook4j.api.FavoriteMethods;
 import sun.security.jca.GetInstance;
 
 // Notice, do not import com.mysql.jdbc.*
@@ -346,6 +347,86 @@ public class MySqlDriver {
 		}
 
 		return interestTypes;
+	}
+	
+    private static String createGoogleTypesByInterestWithRateQuery(int facebookTypeLen,int googleTypeLen) {
+		String s = 
+		"select gi.goog_type_id,gt.goog_type_name, ((interests.count +1) * power(1.2,e.like) * power(1/1.2,e.dislike)) as 'rate' " +
+		"from google_to_interest gi JOIN " +
+		"	 google_types gt USING (goog_type_id) " +
+		"	 JOIN " +
+		"     (select fi.interest_type,count(*) count " +
+		"     from facebook_to_interest fi " +
+		"     join facebook_types ft on ft.fb_type_id = fi.fb_type_id ";
+		StringBuilder queryBuilder = new StringBuilder("where ft.fb_type_name in (");
+        for( int i = 0; i< facebookTypeLen; i++){
+            queryBuilder.append(" ?");
+            if(i != facebookTypeLen -1) queryBuilder.append(",");
+        }
+        queryBuilder.append(") ");
+        s += queryBuilder.toString();
+        
+		String s2 = "     group by fi.interest_type) interests USING (interest_type) " +
+		"     JOIN " +
+		"     (select goog_type_id, COUNT(CASE WHEN like_ind = 1 then 1 ELSE NULL END) as 'like', COUNT(CASE WHEN like_ind = 0 then 1 ELSE NULL END) as 'dislike' " +
+		"     from emotions e " +
+		"     where e.user_id = ? " +
+		"     group by goog_type_id) e USING (goog_type_id) " ;
+			
+        queryBuilder = new StringBuilder("where gi.goog_type_id not in (");
+        for( int i = 0; i< googleTypeLen; i++){
+            queryBuilder.append(" ?");
+            if(i != googleTypeLen -1) queryBuilder.append(",");
+        }
+        queryBuilder.append(") ");
+        s2 += queryBuilder.toString();
+        
+        return s+s2;
+    }
+    
+	public List<Type> getGoogleTypesByInterestWithRate(List<String> facebookTypes,List<Integer> googleTypes,int userID) {
+		connect();
+
+		ResultSet rs = null;
+		PreparedStatement preparedStatement = null;
+		Type t = null;
+		List<Type> types = new ArrayList<Type>();
+		try {
+ 			String s = createGoogleTypesByInterestWithRateQuery(facebookTypes.size(),googleTypes.size());
+			preparedStatement = conn.prepareStatement(s);
+			
+			for(int i = 1; i <= facebookTypes.size(); i++){
+				preparedStatement.setString(i, facebookTypes.get(i- 1));
+			}
+			
+			preparedStatement.setInt(facebookTypes.size() + 1, userID);
+			
+			for(int i = facebookTypes.size() + 2,j=0; j < googleTypes.size(); i++,j++){
+				preparedStatement.setInt(i, googleTypes.get(j));
+			}
+			
+			rs = preparedStatement.executeQuery();
+			if (rs.next()) {
+				t = new Type();
+				t.setId(rs.getInt("goog_type_id"));
+				t.setName(rs.getString("goog_type_name"));
+				t.setRate(rs.getInt("rate"));
+				types.add(t);
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				rs.close();
+				preparedStatement.close();
+				conn.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return types;
 	}
 	
 	public List<Type> getTypesByFacebookInterests(Iterable<String> inSubSelect, Iterable<String> notIn){
