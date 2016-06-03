@@ -1,4 +1,4 @@
-package algo;
+package services;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -17,16 +17,21 @@ import model.Location;
 import model.Place;
 
 public class PlacesService {
+	
+	private int radius;
+	private Location location;
 
-	private static final String API_SERVER_KEY = "AIzaSyB9y8JYZK-7D2Cag6oFEK5km8DOg5SAn6w";
-	private static final String PLACES_API_BASE = "https://maps.googleapis.com/maps/api/place";
+	public PlacesService(Location location, int radius) {
+		this.radius = radius;
+		this.location = location;
+	}
+
 	private static final String TYPE_SEARCH = "/nearbysearch";
-	private static final String OUT_JSON = "/json";
 
-	public ArrayList<Place> getPlaces(Location currLoc, int radius, String type) {
+	public ArrayList<Place> getPlaces(String type) {
 
 		try {
-			String json = getPlacesJson(currLoc, radius, type, null);
+			String json = getPlacesJson(this.location, this.radius, type, null);
 
 			ArrayList<Place> arrayList = new ArrayList<Place>();
 
@@ -39,13 +44,15 @@ public class PlacesService {
 				}
 				for (int i = 0; i < array.size(); i++) {
 					try {
-						Place place = Place.jsonToPontoReferencia((JsonObject) array.get(i));
+						Place place = new Place((JsonObject) array.get(i));
 						arrayList.add(place);
 					} catch (Exception e) {
+						System.out.println(e.getMessage());
+						e.printStackTrace();
 					}
 				}
 				if (nextPage != null) {
-					json = getPlacesJson(currLoc, radius, type, nextPage);
+					json = getPlacesJson(this.location, this.radius, type, nextPage);
 				} else {
 					json = null;
 				}
@@ -67,7 +74,7 @@ public class PlacesService {
 		try {
 			URL url = makeUrl(currLoc, radius, type, nextPage);
 			conn = (HttpURLConnection) url.openConnection();
-			InputStreamReader in = new InputStreamReader(conn.getInputStream(), "UTF-8");
+			InputStreamReader in = new InputStreamReader(conn.getInputStream(), GoogleServicesCons.UTF8);
 
 			int read;
 			char[] buff = new char[1024];
@@ -88,10 +95,11 @@ public class PlacesService {
 	}
 
 	private URL makeUrl(Location currLoc, int radius, String type, String nextPage) throws MalformedURLException {
-		StringBuilder sb = new StringBuilder(PLACES_API_BASE);
+		StringBuilder sb = new StringBuilder(GoogleServicesCons.PLACES_API_BASE);
 		sb.append(TYPE_SEARCH);
-		sb.append(OUT_JSON);
-		sb.append("?key=" + API_SERVER_KEY);
+		sb.append(GoogleServicesCons.OUT_JSON);
+		sb.append("?key=" + GoogleServicesCons.API_SERVER_KEY);
+		sb.append("&language=" + GoogleServicesCons.HEBREW_LANG);
 		sb.append("&location=" + currLoc.lat + "," + currLoc.lng);
 		sb.append("&radius=" + String.valueOf(radius));
 		sb.append("&type=" + type);

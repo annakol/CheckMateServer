@@ -15,6 +15,7 @@ public class TypeDictionary {
 	
 	private static void initMap(){
 		typeN = new HashMap<String, String>();
+		
 		typeN.put("Amusement Park Ride", "amusement_park");
 		typeN.put("Zoo & Aquarium", "zoo");
 		typeN.put("Art Gallery", "art_gallery");
