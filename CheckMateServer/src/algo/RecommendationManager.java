@@ -1,6 +1,7 @@
 package algo;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -36,7 +37,7 @@ public class RecommendationManager {
 		}
 	}
 	
-	public static List<Place> getRecommendedPlaces(Location location, JsonArray facebookTypes, int userId) {
+	public static List<Place> getRecommendedPlaces(Location location, JsonArray facebookTypes, int userId, Calendar time) {
 
 		//convertListJson(facebookTypes);
 
@@ -124,7 +125,7 @@ public class RecommendationManager {
 		List<Place> finalPlaces = new ArrayList<Place>();
 		
 		for (Type type : finalAmounts.keySet()) {
-			 finalPlaces.addAll(getTop(allPlaces.get(type), finalAmounts.get(type))); 
+			 finalPlaces.addAll(getTop(allPlaces.get(type), finalAmounts.get(type), time)); 
 		}
 		
 		//TODO: extract the comparator
@@ -161,11 +162,12 @@ public class RecommendationManager {
 		return sortedMap;
 	}
 	
-	private static List<Place> getTop(List<Place> places, int amount){
+	private static List<Place> getTop(List<Place> places, int amount, Calendar time){
 		
 		List<Place> top = new ArrayList<Place>();
 		for (Place place : places) {
-			if (place.getAllGoogleData()){
+			place.fetchFullData();
+			if (place.isOpen(time)){
 				top.add(place);
 				if (--amount <= 0){
 					break;

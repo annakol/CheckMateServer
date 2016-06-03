@@ -26,25 +26,26 @@ import model.Place;
 @WebServlet("/recommendation")
 public class recommendationServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	
+
 	private static final String LOCATION_PARAM = "location";
 	private static final String CHECKIN_TYPES_PARAM = "types";
-	
-    /**
-     * @see HttpServlet#HttpServlet()
-     */
-    public recommendationServlet() {
-        super();
-        // TODO Auto-generated constructor stub
-        
-    }
-    
-    @Override
-    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-    	// TODO Auto-generated method stub
-    	//super.service(request, response);
-    	
-    	String locStr = request.getParameter(LOCATION_PARAM);
+
+	/**
+	 * @see HttpServlet#HttpServlet()
+	 */
+	public recommendationServlet() {
+		super();
+		// TODO Auto-generated constructor stub
+
+	}
+
+	@Override
+	protected void service(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		// TODO Auto-generated method stub
+		// super.service(request, response);
+
+		String locStr = request.getParameter(LOCATION_PARAM);
 		Location currLoc = null;
 
 		if (locStr != null) {
@@ -60,33 +61,41 @@ public class recommendationServlet extends HttpServlet {
 		JsonObject requestJson = new JsonParser().parse(checkinTypes).getAsJsonObject();
 		JsonArray typesArray = requestJson.getAsJsonArray("types");
 
+		
+		Long timeMillis = requestJson.get("time").getAsLong();
+		Calendar time = Calendar.getInstance();
+		time.setTimeInMillis(timeMillis);;
 		Integer userId = requestJson.get("userId").getAsInt();
 
 		Location currentLocation = new Location(requestJson.get("latitude").getAsString(),
 				requestJson.get("longitude").getAsString());
 
-		List<Place> recommendedPlaces = RecommendationManager.getRecommendedPlaces(currentLocation, typesArray, userId);
-		
+		List<Place> recommendedPlaces = RecommendationManager.getRecommendedPlaces(currentLocation, typesArray, userId, time);
+
 		Gson gson = new GsonBuilder().create();
 
 		response.setContentType("application/json");
 		response.setCharacterEncoding("utf-8");
 		gson.toJson(recommendedPlaces, response.getWriter());
 
-    }
+	}
 
 	/**
-	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse
+	 *      response)
 	 */
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
 		// TODO Auto-generated method stub
 		response.getWriter().append("Served at: ").append(request.getContextPath());
 	}
 
 	/**
-	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse
+	 *      response)
 	 */
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
 		// TODO Auto-generated method stub
 		doGet(request, response);
 	}

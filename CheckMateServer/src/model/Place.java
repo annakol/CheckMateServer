@@ -1,6 +1,7 @@
 package model;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -16,23 +17,23 @@ import com.restfb.Parameter;
 import algo.RatingManager;
 import services.FacebookPlace;
 import services.LoggedInFacebookClient;
+import services.PlaceDetailsService;
 
 public class Place {
-	private String id;
+	private String place_id;
 	private String icon;
 	private String name;
-	private String vicinity;
 	private Location location = new Location();
 	private float googleRating;
-	private String url;
 	private List<String> types = new ArrayList<String>();
 	private double distance;
-	// private Double latitude;
-	// private Double longitude;
 
-	// doesn't exist
 	private String address;
 	private String phoneNumber;
+	private String website;
+	private String[] openHoursText;
+	private JsonArray openHours;
+	private String photo;
 
 	// local
 	private Double rate;
@@ -45,11 +46,11 @@ public class Place {
 	}
 
 	public String getId() {
-		return id;
+		return place_id;
 	}
 
 	public void setId(String id) {
-		this.id = id;
+		this.place_id = id;
 	}
 
 	public String getIcon() {
@@ -84,14 +85,6 @@ public class Place {
 		this.name = name;
 	}
 
-	public String getVicinity() {
-		return vicinity;
-	}
-
-	public void setVicinity(String vicinity) {
-		this.vicinity = vicinity;
-	}
-
 	public String getAddress() {
 		return address;
 	}
@@ -109,11 +102,11 @@ public class Place {
 	}
 
 	public String getUrl() {
-		return url;
+		return website;
 	}
 
 	public void setUrl(String url) {
-		this.url = url;
+		this.website = url;
 	}
 
 	public void setTypes(List<String> types) {
@@ -160,8 +153,75 @@ public class Place {
 		this.distance = distance;
 	}
 
-	public Place() {
+	public String getWebsite() {
+		return website;
+	}
 
+	public void setWebsite(String website) {
+		this.website = website;
+	}
+
+	public String[] getOpenHoursText() {
+		return openHoursText;
+	}
+
+	public void setOpenHoursText(String[] openHoursText) {
+		this.openHoursText = openHoursText;
+	}
+
+	public JsonArray getOpenHours() {
+		return openHours;
+	}
+
+	public void setOpenHours(JsonArray openHours) {
+		this.openHours = openHours;
+	}
+
+	public String getPhoto() {
+		return photo;
+	}
+
+	public void setPhoto(String photo) {
+		this.photo = photo;
+	}
+
+	public Place() {
+	}
+
+	public void fetchFullData() {
+		PlaceDetailsService pds = new PlaceDetailsService(this.place_id);
+		JsonObject details = pds.getDetails();
+
+		this.setAddress(details.get("formatted_address").getAsString());
+		JsonElement formatted_phone_number = details.get("formatted_phone_number");
+		this.setPhoneNumber(formatted_phone_number != null ? formatted_phone_number.getAsString() : "");
+		JsonElement website = details.get("website");
+		this.setUrl(website != null ? website.getAsString() : "");
+
+		JsonElement opening_hours = details.get("opening_hours");
+		if (opening_hours != null) {
+			JsonObject openingHours = opening_hours.getAsJsonObject();
+
+			this.setOpenHours(openingHours.get("periods").getAsJsonArray());
+
+			JsonArray tempWeekDay = openingHours.get("weekday_text").getAsJsonArray();
+			int length = tempWeekDay.size();
+			String[] h = new String[length];
+
+			if (length > 0) {
+				for (int i = 0; i < length; i++) {
+					h[i] = tempWeekDay.get(i).getAsString();
+				}
+			}
+			this.setOpenHoursText(h);
+		}
+		
+		JsonElement photos = details.get("photos");
+		if(photos != null){
+		JsonArray tempPhotos = photos.getAsJsonArray();
+
+		this.setPhoto(tempPhotos.get(0).getAsJsonObject().get("photo_reference").getAsString());
+		}
 	}
 
 	public Place(JsonObject placeJson) {
@@ -172,18 +232,12 @@ public class Place {
 			this.setLongitude(location.get("lng").getAsDouble());
 			this.setIcon(placeJson.get("icon").getAsString());
 			this.setName(placeJson.get("name").getAsString());
-			JsonElement vicinityJson = placeJson.get("vicinity");
-			if (vicinityJson != null) {
-				this.setVicinity(vicinityJson.getAsString());
-			}
-			this.setId(placeJson.get("id").getAsString());
-			// result.setAddress(pontoReferencia.get("formatted_address").getAsString());
-			// result.setPhoneNumber(pontoReferencia.get("formatted_phone_number").getAsString());
+
+			this.setId(placeJson.get("place_id").getAsString());
 			JsonElement rating = placeJson.get("rating");
 			if (rating != null) {
 				this.setGoogleRating(rating.getAsFloat());
 			}
-			// result.setUrl(pontoReferencia.get("url").getAsString());
 
 			JsonArray typesArray = placeJson.getAsJsonArray("types");
 
@@ -191,7 +245,7 @@ public class Place {
 				this.getTypes().add(typesArray.get(j).getAsString());
 			}
 
-			this.fillFacebookData();
+			this.fetchFacebookData();
 
 			this.rate = RatingManager.getInstance().getRate(this);
 
@@ -200,13 +254,21 @@ public class Place {
 		}
 	}
 
-	//TODO: check if the place is open at the selected time
-	public boolean getAllGoogleData(){
-		//TODO: get all data from google
+	// TODO: check if the place is open at the selected time
+	public boolean isOpen(Calendar dateAndTime) {
+		if(this.openHours != null || !this.openHours.isJsonNull() || 
+				!this.openHours.isJsonPrimitive()){
+			int day = dateAndTime.get(Calendar.DAY_OF_WEEK);
+			JsonObject dayOpenHours = this.openHours.get(day).getAsJsonObject();
+			
+			 dayOpenHours.get("open");
+			
+			
+		}
 		return true;
 	}
-	
-	public void fillFacebookData() {
+
+	public void fetchFacebookData() {
 		FacebookClient facebookClient = new LoggedInFacebookClient();
 		Connection<FacebookPlace> placeSearch = facebookClient.fetchConnection("search", FacebookPlace.class,
 				Parameter.with("q", this.getName()), Parameter.with("type", "place"),
@@ -240,7 +302,7 @@ public class Place {
 
 	@Override
 	public String toString() {
-		return "Place{" + this.name + ":" + this.rate + " - distance=" + this.distance + " ,id="+this.id+"}";
+		return "Place{" + this.name + ":" + this.rate + " - distance=" + this.distance + " ,id=" + this.place_id + "}";
 	}
 
 }
